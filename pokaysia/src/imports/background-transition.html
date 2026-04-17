@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Background transition on scroll</title>
+  <style>
+    :root {
+      --bg: #0b0d12;
+      --fg: #ffffff;
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--fg);
+    }
+
+    /* Fixed background layer that we animate */
+    .bg {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      transition: none; /* animation is JS-driven for smoothness */
+      z-index: -1;
+    }
+
+    /* Optional: add a very subtle vignette/noise-like depth */
+    .bg::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(1200px 600px at 50% 10%, rgba(255,255,255,0.06), transparent 60%),
+        radial-gradient(900px 500px at 20% 90%, rgba(255,255,255,0.04), transparent 55%);
+      opacity: 0.9;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      backdrop-filter: blur(10px);
+      background: rgba(0,0,0,0.15);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 14px 18px;
+    }
+
+    .wrap { max-width: 980px; margin: 0 auto; padding: 0 18px; }
+
+    section {
+      min-height: 100vh;
+      display: grid;
+      align-content: center;
+      padding: 80px 0;
+    }
+
+    h1, h2 { margin: 0 0 12px; letter-spacing: -0.02em; }
+    p { margin: 0; max-width: 60ch; opacity: 0.86; line-height: 1.5; }
+
+    .card {
+      margin-top: 18px;
+      padding: 18px 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.04);
+      backdrop-filter: blur(8px);
+    }
+  </style>
+</head>
+<body>
+  <div class="bg" aria-hidden="true"></div>
+
+  <header>
+    <div class="wrap">
+      <strong>Demo</strong> — плавная смена фона по скроллу
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- Put your target colors on sections via data-bg -->
+    <section data-bg="#0b0d12">
+      <div>
+        <h1>Секция 1</h1>
+        <p>Фон меняется не “скачком”, а плавно перетекает, когда новая секция становится активной.</p>
+        <div class="card">Любой контент поверх fixed-слоя.</div>
+      </div>
+    </section>
+
+    <section data-bg="#121a2a">
+      <div>
+        <h2>Секция 2</h2>
+        <p>Цвет берётся из <code>data-bg</code> и интерполируется через requestAnimationFrame.</p>
+        <div class="card">Мягкий “премиум” эффект без тяжёлых фильтров.</div>
+      </div>
+    </section>
+
+    <section data-bg="#2a1824">
+      <div>
+        <h2>Секция 3</h2>
+        <p>Можно делать градации внизу страницы: темнее → светлее, холоднее → теплее.</p>
+        <div class="card">Если нужно, добавь ещё 3–6 секций.</div>
+      </div>
+    </section>
+
+    <section data-bg="#0f241c">
+      <div>
+        <h2>Секция 4</h2>
+        <p>Эта техника повторяет ощущение “погружения в новый слой” как на студийных сайтах.</p>
+        <div class="card">Готово.</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // ---------- Helpers ----------
+    function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+
+    function hexToRgb(hex) {
+      const h = hex.trim().replace("#", "");
+      const full = h.length === 3 ? h.split("").map(c => c + c).join("") : h;
+      const n = parseInt(full, 16);
+      return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+    }
+
+    function rgbToHex({ r, g, b }) {
+      const to = (v) => v.toString(16).padStart(2, "0");
+      return "#" + to(r) + to(g) + to(b);
+    }
+
+    function lerp(a, b, t) { return a + (b - a) * t; }
+
+    function lerpColor(c1, c2, t) {
+      return {
+        r: Math.round(lerp(c1.r, c2.r, t)),
+        g: Math.round(lerp(c1.g, c2.g, t)),
+        b: Math.round(lerp(c1.b, c2.b, t)),
+      };
+    }
+
+    // ---------- Background transition logic ----------
+    const sections = Array.from(document.querySelectorAll("section[data-bg]"));
+    const colors = sections.map(s => hexToRgb(s.dataset.bg));
+
+    // Current (animated) and target background colors
+    let current = { ...colors[0] };
+    let target = { ...colors[0] };
+
+    // Smoothness: higher = faster snap, lower = more floaty
+    const SMOOTH = 0.08;
+
+    // Update CSS var
+    function applyBg() {
+      document.documentElement.style.setProperty("--bg", rgbToHex(current));
+    }
+
+    // Animation loop
+    function tick() {
+      // move current color toward target color
+      current = lerpColor(current, target, SMOOTH);
+      applyBg();
+      requestAnimationFrame(tick);
+    }
+    applyBg();
+    requestAnimationFrame(tick);
+
+    // Decide which section is "active"
+    // We use IntersectionObserver so it switches when a section crosses mid-viewport.
+    const io = new IntersectionObserver((entries) => {
+      // pick the entry closest to the center by using intersectionRatio + bounding box
+      const visible = entries
+        .filter(e => e.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+
+      if (!visible) return;
+
+      const idx = sections.indexOf(visible.target);
+      if (idx >= 0) target = { ...colors[idx] };
+    }, {
+      root: null,
+      threshold: [0.2, 0.35, 0.5, 0.65],
+      rootMargin: "-40% 0px -40% 0px" // makes "active" around the middle
+    });
+
+    sections.forEach(s => io.observe(s));
+
+    // Optional: if you want transitions to respond continuously (not section-by-section),
+    // uncomment this block to blend between neighboring sections by scroll progress.
+    /*
+    window.addEventListener("scroll", () => {
+      const vh = window.innerHeight;
+      const y = window.scrollY;
+
+      // find the section whose top is above viewport center
+      const center = y + vh * 0.5;
+      let i = 0;
+      for (; i < sections.length - 1; i++) {
+        const top = sections[i].offsetTop;
+        const nextTop = sections[i + 1].offsetTop;
+        if (center >= top && center < nextTop) break;
+      }
+
+      const aTop = sections[i].offsetTop;
+      const bTop = sections[Math.min(i + 1, sections.length - 1)].offsetTop;
+      const t = bTop === aTop ? 0 : clamp((center - aTop) / (bTop - aTop), 0, 1);
+
+      const a = colors[i];
+      const b = colors[Math.min(i + 1, colors.length - 1)];
+      target = lerpColor(a, b, t);
+    }, { passive: true });
+    */
+  </script>
+</body>
+</html>

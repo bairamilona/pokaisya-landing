@@ -1,0 +1,71 @@
+Покайся — Brand & Design System
+1. Стиль бренда (вайб)
+Настроение: "исповедальная будка" встречает Apple Store — интимно, премиально, без осуждения
+Визуальная метафора: зеркало с несколькими гранями; мягкий рассеянный свет на матовом стекле
+Материал UI: выдавленный пластилин — neumorphism на #eceef0, тени только от белого и серого
+Типографика: один шрифт Raleway, вес 400→800, нет декора, нет засечек, tight letter-spacing на заголовках (-0.03em)
+Движение: iOS spring physics (damping 34, stiffness 320), ничего не «прыгает», всё «дышит»
+Цвет: почти монохромный — акцент только через градиент #768392 → #646f7d; никаких ярких цветов
+Чего избегать: тени drop-shadow синего/фиолетового, border-radius < 14px на картах, font-weight < 600 на кнопках, любые border: 1px solid #000, иконки с обводкой > 1.5px
+Spacing: 8px grid, секции 80px vertical padding, карточки 24–28px internal
+2. Дизайн-токены
+Токен	Значение
+--bg	#eceef0
+--surface	linear-gradient(145deg, #f0f2f4, #e4e6e8)
+--shadow-out	8px 8px 18px #d1d4d8, -8px -8px 18px #ffffff
+--shadow-out-sm	4px 4px 10px #d1d4d8, -4px -4px 10px #ffffff
+--shadow-in	inset 4px 4px 10px #d1d4d8, inset -4px -4px 10px #ffffff
+--border	0.5px solid rgba(255,255,255,0.55)
+--text-primary	#37454f
+--text-sec	#708593
+--text-muted	#9aa2b1
+--accent	linear-gradient(to right, #768392, #646f7d 50%, #768392)
+--radius-card	24px
+--radius-pill	60px
+--radius-chip	40px
+--font	'Raleway', sans-serif
+--ease	cubic-bezier(0.23, 1, 0.32, 1)
+3. CSS-файл для лендинга
+:root {
+  --bg: #eceef0;
+  --surface: linear-gradient(145deg, #f0f2f4, #e4e6e8);
+  --shadow-out: 8px 8px 18px #d1d4d8, -8px -8px 18px #ffffff;
+  --shadow-out-sm: 4px 4px 10px #d1d4d8, -4px -4px 10px #ffffff;
+  --shadow-in: inset 4px 4px 10px #d1d4d8, inset -4px -4px 10px #ffffff;
+  --border: 0.5px solid rgba(255,255,255,0.55);
+  --text-primary: #37454f;
+  --text-sec: #708593;
+  --text-muted: #9aa2b1;
+  --accent: linear-gradient(to right, #768392, #646f7d 50%, #768392);
+  --r-card: 24px; --r-pill: 60px; --r-chip: 40px;
+  --ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --font: 'Raleway', sans-serif;
+}
+body { background: var(--bg); font-family: var(--font); color: var(--text-primary); -webkit-font-smoothing: antialiased; }
+.nm-card { background: var(--surface); border-radius: var(--r-card); box-shadow: var(--shadow-out); border: var(--border); }
+.btn-primary { border-radius: var(--r-pill); background: var(--accent); box-shadow: 0 6px 28px rgba(100,111,125,.38); color: #fff; font-weight: 700; border: 0.5px solid rgba(255,255,255,.28); transition: transform .25s var(--ease); }
+.btn-primary:hover { transform: scale(1.025); }
+.btn-primary:active { transform: scale(.97); }
+.btn-ghost { border-radius: var(--r-pill); background: var(--surface); box-shadow: var(--shadow-out-sm); border: var(--border); color: var(--text-sec); font-weight: 600; transition: transform .25s var(--ease), box-shadow .25s var(--ease); }
+.btn-ghost:hover { transform: scale(1.02); box-shadow: var(--shadow-out); }
+.chip { border-radius: var(--r-chip); background: var(--surface); box-shadow: var(--shadow-out-sm); border: var(--border); color: var(--text-sec); font-weight: 600; transition: all .22s var(--ease); }
+.chip.active { background: var(--accent); box-shadow: var(--shadow-in); color: #fff; }
+.nm-input { background: var(--bg); box-shadow: var(--shadow-in); border: var(--border); border-radius: 14px; color: var(--text-primary); }
+section { padding: 80px 24px; }
+h1,h2,h3 { font-weight: 800; letter-spacing: -0.025em; color: var(--text-primary); }
+4. Микровзаимодействия
+① Кнопка (hover + tap)
+
+/* hover: выплывает из поверхности */
+.btn-primary:hover { transform: scale(1.025); box-shadow: 0 10px 36px rgba(100,111,125,.46); }
+/* tap: вдавливается */
+.btn-primary:active { transform: scale(.97); box-shadow: var(--shadow-in); }
+② Карточка-линза (toggle pressed)
+
+/* clicked: тень инвертируется — карточка "вдавливается" */
+.chip.active { box-shadow: var(--shadow-in); background: linear-gradient(145deg, #e4e6e8, #f0f2f4); }
+③ Scroll reveal
+
+// Каждый блок: opacity 0→1, translateY 22px→0
+// delay: i * 0.12s, ease: cubic-bezier(0.23, 1, 0.32, 1), duration: 0.6s
+// Trigger: IntersectionObserver с margin: -60px

@@ -1,0 +1,12 @@
+@import './tailwind.css';
+@import './theme.css';
+
+/* ── Kill every native cursor — must be outside @layer to beat inline styles ── */
+html, html *, html *::before, html *::after {
+  cursor: none !important;
+}
+
+/* ── Ensure Motion's useScroll can calculate scroll offsets correctly ── */
+html {
+  position: relative;
+}
