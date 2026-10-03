@@ -15,6 +15,14 @@ export const translations = {
       word3: "angle.",
       sub: "A journal with prisms. Each prism is a way to see a situation differently, find meaning, and take the next step.",
       scrollBtn: "Explore",
+      tryLabel: "What's on your mind?",
+      tryExamples: [
+        "I can't decide whether to quit my job…",
+        "Why does this argument keep repeating?",
+        "I feel stuck and don't know why…",
+      ],
+      tryBtn: "Look",
+      tryAlt: "or open the app",
     },
     showcase: {
       label: "The App",
@@ -204,6 +212,14 @@ export const translations = {
       word3: "углом.",
       sub: "Дневник с призмами. Каждая призма — способ увидеть ситуацию иначе, найти смысл и сделать следующий шаг.",
       scrollBtn: "Смотреть дальше",
+      tryLabel: "Что у тебя на уме?",
+      tryExamples: [
+        "Не могу решить, уходить ли с работы…",
+        "Почему этот спор повторяется снова?",
+        "Будто хожу по кругу и не понимаю почему…",
+      ],
+      tryBtn: "Взглянуть",
+      tryAlt: "или открыть приложение",
     },
     showcase: {
       label: "Приложение",

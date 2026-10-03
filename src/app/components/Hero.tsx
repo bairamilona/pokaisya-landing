@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from "react";
 import {
+  AnimatePresence,
   motion,
   useInView,
   useMotionValue,
@@ -10,6 +11,10 @@ import { useLang } from "../context/LangContext";
 const EASE = [0.16, 1, 0.3, 1] as const;
 // Hero bg — must match data-bg so the opaque line backgrounds blend in
 const HERO_BG = "#eceef0";
+const APP_URL = "https://app.pokaysia.app";
+
+const cursorExpand   = () => window.dispatchEvent(new CustomEvent("cursor:active", { detail: { key: "expand" } }));
+const cursorCollapse = () => window.dispatchEvent(new Event("cursor:inactive"));
 
 // ─── FitLine ──────────────────────────────────────────────────────────────────
 // Outer motion.div:  handles scroll-driven y (MotionValue)  +  layout (flex:1)
@@ -291,7 +296,7 @@ export function Hero() {
         />
       </div>
 
-      {/* ── Sub-copy + Explore link ──────────────────────────────────────── */}
+      {/* ── Sub-copy + try-the-app form ─────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={triggered ? { opacity: 1, y: 0 } : {}}
@@ -322,58 +327,189 @@ export function Hero() {
           {h.sub}
         </p>
 
-        <a
-          href="#showcase"
-          style={{
-            fontSize: 10,
-            fontWeight: 700,
-            color: "rgba(46,60,70,0.28)",
-            textDecoration: "none",
-            letterSpacing: "0.16em",
-            textTransform: "uppercase",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 10,
-            borderBottom: "0.5px solid rgba(46,60,70,0.1)",
-            paddingBottom: 3,
-            transition: "color 0.22s ease, border-color 0.22s ease, gap 0.3s ease",
-            flexShrink: 0,
-          }}
-          onMouseEnter={(e) => {
-            const el = e.currentTarget as HTMLAnchorElement;
-            el.style.color = "#2e3c46";
-            el.style.borderColor = "rgba(46,60,70,0.32)";
-            el.style.gap = "18px";
-          }}
-          onMouseLeave={(e) => {
-            const el = e.currentTarget as HTMLAnchorElement;
-            el.style.color = "rgba(46,60,70,0.28)";
-            el.style.borderColor = "rgba(46,60,70,0.1)";
-            el.style.gap = "10px";
-          }}
-        >
-          {h.scrollBtn} <span aria-hidden>↓</span>
-        </a>
-      </motion.div>
-
-      {/* Scroll pulse */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={triggered ? { opacity: 1 } : {}}
-        transition={{ duration: 0.7, delay: 1.5 }}
-        style={{ position: "absolute", bottom: 40, right: 28, zIndex: 5 }}
-      >
-        <motion.div
-          animate={{ y: [0, 8, 0] }}
-          transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-          style={{
-            width: "0.5px",
-            height: 36,
-            background:
-              "linear-gradient(to bottom, rgba(46,60,70,0) 0%, rgba(46,60,70,0.12) 100%)",
-          }}
-        />
+        <TryForm />
       </motion.div>
     </section>
+  );
+}
+
+// ─── TryForm ──────────────────────────────────────────────────────────────────
+// The product's first step (ask a question) right in the hero. Submitting opens
+// the app with the question prefilled. Text goes in the URL hash, not the
+// query, so it never reaches server logs — matches "data stays on device".
+// ─────────────────────────────────────────────────────────────────────────────
+function TryForm() {
+  const { t, lang } = useLang();
+  const h = t.hero;
+  const [value, setValue]     = useState("");
+  const [focused, setFocused] = useState(false);
+  const [exIdx, setExIdx]     = useState(0);
+
+  // Cycle example placeholders while the field is empty and idle
+  useEffect(() => {
+    if (focused || value) return;
+    const id = setInterval(() => setExIdx((i) => (i + 1) % h.tryExamples.length), 3200);
+    return () => clearInterval(id);
+  }, [focused, value, h.tryExamples.length]);
+
+  const openApp = (q: string) => {
+    const hash = q.trim() ? `#q=${encodeURIComponent(q.trim())}` : "";
+    window.open(`${APP_URL}/?lang=${lang}${hash}`, "_blank", "noopener");
+  };
+
+  const active = focused || value.length > 0;
+
+  return (
+    <form
+      onSubmit={(e) => { e.preventDefault(); openApp(value); }}
+      style={{
+        width: "min(100%, 440px)",
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+      }}
+    >
+      <label
+        htmlFor="hero-try"
+        style={{
+          fontSize: 10,
+          fontWeight: 600,
+          letterSpacing: "0.22em",
+          textTransform: "uppercase",
+          color: "rgba(46,60,70,0.32)",
+        }}
+      >
+        {h.tryLabel}
+      </label>
+
+      <div
+        style={{
+          position: "relative",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "6px 6px 6px 18px",
+          borderRadius: 40,
+          background: active ? "rgba(255,255,255,0.72)" : "rgba(255,255,255,0.42)",
+          border: `0.5px solid ${active ? "rgba(46,60,70,0.22)" : "rgba(46,60,70,0.1)"}`,
+          boxShadow: active ? "0 8px 28px -12px rgba(46,60,70,0.25)" : "none",
+          transition: "background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease",
+        }}
+      >
+        <input
+          id="hero-try"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          autoComplete="off"
+          enterKeyHint="go"
+          style={{
+            flex: 1,
+            minWidth: 0,
+            border: "none",
+            outline: "none",
+            background: "transparent",
+            fontFamily: "'Raleway', sans-serif",
+            fontSize: 15,
+            fontWeight: 400,
+            color: "#26211d",
+            padding: "8px 0",
+            position: "relative",
+            zIndex: 1,
+          }}
+        />
+
+        {/* Animated placeholder — a native one can't crossfade */}
+        {!value && (
+          <span
+            aria-hidden
+            style={{
+              position: "absolute",
+              left: 18,
+              right: 130,
+              top: "50%",
+              transform: "translateY(-50%)",
+              pointerEvents: "none",
+              overflow: "hidden",
+              height: 20,
+            }}
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={`${lang}-${exIdx}`}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.45, ease: EASE }}
+                style={{
+                  display: "block",
+                  fontSize: 15,
+                  fontWeight: 300,
+                  fontStyle: "italic",
+                  lineHeight: "20px",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  color: "rgba(46,60,70,0.34)",
+                }}
+              >
+                {h.tryExamples[exIdx]}
+              </motion.span>
+            </AnimatePresence>
+          </span>
+        )}
+
+        <button
+          type="submit"
+          onMouseEnter={cursorExpand}
+          onMouseLeave={cursorCollapse}
+          style={{
+            flexShrink: 0,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "11px 18px",
+            borderRadius: 40,
+            border: "none",
+            background: "#26211d",
+            color: "#eceef0",
+            fontFamily: "'Raleway', sans-serif",
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            cursor: "none",
+            transition: "transform 0.28s cubic-bezier(0.23,1,0.32,1), background 0.22s ease",
+          }}
+          onMouseDown={(e) => { e.currentTarget.style.transform = "scale(0.96)"; }}
+          onMouseUp={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+        >
+          {h.tryBtn} <span aria-hidden>↗</span>
+        </button>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => openApp("")}
+        onMouseEnter={cursorExpand}
+        onMouseLeave={cursorCollapse}
+        style={{
+          alignSelf: "flex-end",
+          marginRight: 18,
+          padding: 0,
+          border: "none",
+          background: "none",
+          fontFamily: "'Raleway', sans-serif",
+          fontSize: 11,
+          fontWeight: 400,
+          color: "rgba(46,60,70,0.38)",
+          borderBottom: "0.5px solid rgba(46,60,70,0.14)",
+          cursor: "none",
+        }}
+      >
+        {h.tryAlt} ↗
+      </button>
+    </form>
   );
 }
